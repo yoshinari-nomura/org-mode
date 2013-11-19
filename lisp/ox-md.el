@@ -89,7 +89,7 @@ This variable can be set to either `atx' or `setext'."
 		     (quote-block . org-md-quote-block)
 		     (quote-section . org-md-example-block)
 		     (section . org-md-section)
-		     (src-block . org-md-example-block)
+		     (src-block . org-md-src-block)
 		     (template . org-md-template)
 		     (verbatim . org-md-verbatim)))
 
@@ -142,7 +142,7 @@ channel."
 	    value)))
 
 
-;;;; Example Block and Src Block
+;;;; Example Block
 
 (defun org-md-example-block (example-block contents info)
   "Transcode EXAMPLE-BLOCK element into Markdown format.
@@ -152,6 +152,62 @@ channel."
    "^" "    "
    (org-remove-indentation
     (org-element-property :value example-block))))
+
+;;;; Src Block
+;;; http://lists.gnu.org/archive/html/emacs-orgmode/2013-05/msg00170.html
+
+(defcustom org-md-src-style 'indent
+  "Style used to format the source.
+This variable can be set to either `indent', `github-flavored'
+ or `octopress'.
+ For the information about github-flavored markdown, see
+\"https://help.github.com/articles/github-flavored-markdown\";.
+
+The main difference between github-flavored and octopress is that
+the latter recognizes #+CAPTION as a title."
+  :group 'org-export-md
+  :type '(choice
+      (const :tag "Use ordinary markdown style" indent)
+      (const :tag "Use Github flavored markdown style"
+         github-flavored)
+      (const :tag "Use Octopress flavored markdown style"
+         octopress)))
+
+
+(defun %string-prop (prop block)
+  (let ((prop (org-element-property prop block)))
+    (if prop prop "")))
+
+(defun org-md-src-block (src-block contents info)
+  "Transcode SRC-BLOCK element into Markdown format.
+CONTENTS is nil.  INFO is a plist used as a communication
+channel."
+  (case org-md-src-style
+    (indent (org-md-example-block src-block contents info))
+    (github-flavored
+     (concatenate
+      'string
+      "```"
+      (%string-prop :language src-block)
+      "\n"
+      (org-remove-indentation
+       (org-element-property :value src-block))
+      "```"))
+    (octopress
+     (concatenate
+      'string
+      "```"
+      (%string-prop :language src-block)
+      " "
+      (let ((caption (org-element-property :caption src-block)))
+    (if caption
+        (org-export-data
+         (org-export-get-caption src-block) info)
+      ""))
+      "\n"
+      (org-remove-indentation
+       (org-element-property :value src-block))
+      "```"))))
 
 
 ;;;; Headline
